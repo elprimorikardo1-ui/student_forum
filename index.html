@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Студенческий форум</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <h1>Студенческий форум</h1>
+      <p>Создавайте треды, обсуждайте, комментируйте.</p>
+      <div id="auth-block" class="card auth-card">
+        <div id="user-info" class="user-info hidden"></div>
+        <form id="login-form" class="auth-form">
+          <h3>Войти / зарегистрироваться</h3>
+          <input id="auth-login" type="text" placeholder="Логин" required minlength="3" />
+          <input id="auth-password" type="password" placeholder="Пароль" required minlength="4" />
+          <div class="avatar-picker">
+            <span>Аватар для регистрации:</span>
+            <input id="auth-avatar" type="hidden" value="👤" />
+            <div class="avatar-options" id="avatar-options">
+              <button type="button" class="avatar-option active" data-avatar="👤">👤</button>
+              <button type="button" class="avatar-option" data-avatar="🦉">🦉</button>
+              <button type="button" class="avatar-option" data-avatar="🐱">🐱</button>
+              <button type="button" class="avatar-option" data-avatar="🐶">🐶</button>
+              <button type="button" class="avatar-option" data-avatar="🦄">🦄</button>
+              <button type="button" class="avatar-option" data-avatar="👾">👾</button>
+            </div>
+          </div>
+          <div class="auth-buttons">
+            <button id="login-btn" type="submit">Войти</button>
+            <button id="register-btn" type="button">Регистрация</button>
+          </div>
+        </form>
+      </div>
+    </header>
+
+    <section class="pane" id="list-pane">
+      <div class="panel-head">
+        <h2>Треды</h2>
+      </div>
+
+      <form id="new-thread-form" class="card card-form">
+        <h3>Новый тред</h3>
+        <p id="thread-author-display" class="meta">Только для авторизованных пользователей</p>
+        <input id="thread-title" type="text" placeholder="Заголовок" required minlength="3" />
+        <textarea id="thread-body" placeholder="Текст треда" required minlength="5"></textarea>
+        <button type="submit">Создать тред</button>
+      </form>
+
+      <ul id="thread-list" class="thread-list"></ul>
+    </section>
+
+    <section class="pane hidden" id="thread-pane">
+      <button id="back-button" class="back-btn">← Назад к тредам</button>
+      <article class="card" id="thread-details"></article>
+
+      <form id="new-comment-form" class="card card-form">
+        <h3>Добавить комментарий</h3>
+        <p id="comment-author-display" class="meta">Только для авторизованных пользователей</p>
+        <textarea id="comment-body" placeholder="Текст комментария" required minlength="2"></textarea>
+        <button type="submit">Добавить</button>
+      </form>
+
+      <div class="comments" id="comments-section">
+        <h3>Комментарии</h3>
+        <ul id="comment-list" class="comment-list"></ul>
+      </div>
+    </section>
+
+    <footer>Включает данные в localStorage, работает как статический сайт.</footer>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
