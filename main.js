@@ -127,6 +127,25 @@ const setupAvatarPicker = () => {
   });
 };
 
+const syncStorageUpdates = (event) => {
+  if (event.key !== STORAGE_KEY) return;
+  if (!event.newValue) return;
+  loadState();
+  renderThreadList();
+  renderCurrentUser();
+  if (state.activeThreadId) {
+    const thread = state.threads.find((item) => item.id === state.activeThreadId);
+    if (thread) {
+      renderComments(thread.comments);
+    } else {
+      state.activeThreadId = null;
+      showPane('list');
+    }
+  }
+};
+
+window.addEventListener('storage', syncStorageUpdates);
+
 const registerUser = (username, password, avatar) => {
   const exists = state.users.some((u) => u.username.toLowerCase() === username.toLowerCase());
   if (exists) {
