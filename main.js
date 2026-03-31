@@ -335,7 +335,9 @@ const addThread = async (title, body) => {
     }]);
     if (error) {
       alert('Ошибка при сохранении треда: ' + error.message);
+      return;
     }
+    await loadSharedThreads();
     return;
   }
 
@@ -371,6 +373,7 @@ const addComment = async (threadId, body) => {
       alert('Ошибка при сохранении комментария: ' + error.message);
       return;
     }
+    await loadSharedThreads();
     return;
   }
 
@@ -449,7 +452,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     showPane('list');
   });
 
-  $('new-comment-form').addEventListener('submit', (event) => {
+  $('new-comment-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const body = $('comment-body').value.trim();
 
