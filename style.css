@@ -83,7 +83,7 @@ header p {
   gap: 14px;
 }
 .auth-form input,
-.auth-form button {
+.auth-form .auth-buttons button {
   width: 100%;
   margin: 0;
 }
