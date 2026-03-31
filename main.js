@@ -6,6 +6,79 @@ const state = {
   activeThreadId: null,
 };
 
+// Оставь пустыми, если хочешь работать только на localStorage.
+// Для общей ленты тредов на всех устройствах заполни эти поля из Supabase:
+// - URL проекта: Settings -> API -> Project URL
+// - ANON KEY: Settings -> API -> anon public
+const SUPABASE_URL = 'https://qwsyuqquhvwpdhohegga.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3c3l1cXF1aHZ3cGRob2hlZ2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTg5OTUsImV4cCI6MjA5MDQ5NDk5NX0.nHiz8rVX99e8eytghYEfWx11ecS7OzS1WZl9yKgH_o8';
+let db = null;
+
+const useDatabase = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
+
+const initDatabase = () => {
+  if (!useDatabase()) return;
+  const { createClient } = supabase;
+  db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  subscribeRealtime();
+};
+
+const fetchThreadsFromDatabase = async () => {
+  if (!db) return [];
+  const { data, error } = await db
+    .from('threads')
+    .select('*, comments(*)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('Supabase fetch error:', error.message);
+    return [];
+  }
+  return data.map((thread) => ({
+    id: thread.id,
+    title: thread.title,
+    body: thread.body,
+    author: thread.author,
+    authorAvatar: thread.authorAvatar,
+    createdAt: thread.created_at,
+    comments: Array.isArray(thread.comments)
+      ? thread.comments
+          .map((comment) => ({
+            id: comment.id,
+            body: comment.body,
+            author: comment.author,
+            authorAvatar: comment.authorAvatar,
+            createdAt: comment.created_at,
+          }))
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      : [],
+  }));
+};
+
+const subscribeRealtime = () => {
+  if (!db) return;
+  db
+    .from('threads')
+    .on('*', () => loadSharedThreads())
+    .subscribe();
+  db
+    .from('comments')
+    .on('*', () => loadSharedThreads())
+    .subscribe();
+};
+
+const loadSharedThreads = async () => {
+  if (!db) return;
+  state.threads = await fetchThreadsFromDatabase();
+  renderThreadList();
+  if (state.activeThreadId) {
+    const thread = state.threads.find((item) => item.id === state.activeThreadId);
+    if (thread) {
+      renderComments(thread.comments);
+    }
+  }
+};
+
 const saveState = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     threads: state.threads,
@@ -247,9 +320,22 @@ const escapeHtml = (unsafe) => {
     .replace(/'/g, '&#039;');
 };
 
-const addThread = (title, body) => {
+const addThread = async (title, body) => {
   if (!state.currentUser) {
     alert('Нужно войти, чтобы создать тред');
+    return;
+  }
+
+  if (db) {
+    const { error } = await db.from('threads').insert([{ 
+      title,
+      body,
+      author: state.currentUser.username,
+      authorAvatar: state.currentUser.avatar,
+    }]);
+    if (error) {
+      alert('Ошибка при сохранении треда: ' + error.message);
+    }
     return;
   }
 
@@ -263,15 +349,28 @@ const addThread = (title, body) => {
     comments: [],
   };
 
-
   state.threads.push(newThread);
   saveState();
   renderThreadList();
 };
 
-const addComment = (threadId, body) => {
+const addComment = async (threadId, body) => {
   if (!state.currentUser) {
     alert('Нужно войти, чтобы отправлять комментарии');
+    return;
+  }
+
+  if (db) {
+    const { error } = await db.from('comments').insert([{
+      thread_id: threadId,
+      body,
+      author: state.currentUser.username,
+      authorAvatar: state.currentUser.avatar,
+    }]);
+    if (error) {
+      alert('Ошибка при сохранении комментария: ' + error.message);
+      return;
+    }
     return;
   }
 
@@ -291,9 +390,14 @@ const addComment = (threadId, body) => {
   renderThreadList();
 };
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  initDatabase();
   loadState();
-  renderThreadList();
+  if (db) {
+    await loadSharedThreads();
+  } else {
+    renderThreadList();
+  }
   renderCurrentUser();
 
   $('login-form').addEventListener('submit', (event) => {
@@ -328,14 +432,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setupAvatarPicker();
 
-  $('new-thread-form').addEventListener('submit', (event) => {
+  $('new-thread-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const title = $('thread-title').value.trim();
     const body = $('thread-body').value.trim();
 
     if (!title || !body) return;
 
-    addThread(title, body);
+    await addThread(title, body);
     $('thread-title').value = '';
     $('thread-body').value = '';
   });
@@ -352,7 +456,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!body) return;
 
     if (state.activeThreadId) {
-      addComment(state.activeThreadId, body);
+      await addComment(state.activeThreadId, body);
       $('comment-body').value = '';
     }
   });

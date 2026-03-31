@@ -64,6 +64,53 @@ git push -u origin main
 - Управление сессиями, удаление/редактирование
 - Поддержка вложенных ответов (как Reddit)
 
+## Supabase для общей ленты
+1. Сделай проект на https://app.supabase.com.
+2. Открой `Table editor` и создай таблицу `threads` с такими полями:
+   - `id` — `uuid`, `primary key`, `default` = `gen_random_uuid()` или `uuid_generate_v4()`
+   - `title` — `text`, `not null`
+   - `body` — `text`, `not null`
+   - `author` — `text`, `not null`
+   - `authorAvatar` — `text`, `not null`
+   - `created_at` — `timestamp with time zone`, `default` = `now()`
+3. Создай таблицу `comments`:
+   - `id` — `uuid`, `primary key`, `default` = `gen_random_uuid()`
+   - `thread_id` — `uuid`, `references threads(id)`
+   - `body` — `text`, `not null`
+   - `author` — `text`, `not null`
+   - `authorAvatar` — `text`, `not null`
+   - `created_at` — `timestamp with time zone`, `default` = `now()`
+4. В `Settings -> API` найди `anon` ключ и URL проекта.
+5. Открой `main.js` и вставь эти значения в `SUPABASE_URL` и `SUPABASE_ANON_KEY`.
+6. Если Supabase настроен, сайт автоматически будет использовать общие треды и комментарии вместо `localStorage`.
+
+### SQL для создания таблиц
+```sql
+create extension if not exists "pgcrypto";
+
+create table threads (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  body text not null,
+  author text not null,
+  authorAvatar text not null,
+  created_at timestamptz default now()
+);
+
+create table comments (
+  id uuid primary key default gen_random_uuid(),
+  thread_id uuid references threads(id),
+  body text not null,
+  author text not null,
+  authorAvatar text not null,
+  created_at timestamptz default now()
+);
+```
+
+### Важно
+- Если используешь Supabase, не забудь поставить `Authorization` для публичного доступа или разрешения анонимных запросов.
+- Для демо можно оставить `anon` ключ.
+
 ## Структура файлов
 - `index.html` — UI
 - `style.css` — стили
