@@ -128,6 +128,14 @@ const getUserAvatar = (avatar, username) => {
   return user?.avatar || '👤';
 };
 
+const isImageAvatar = (avatar) => typeof avatar === 'string' && avatar.startsWith('data:image/');
+const getAvatarHtml = (avatar) => {
+  if (isImageAvatar(avatar)) {
+    return `<img src="${escapeHtml(avatar)}" alt="avatar" class="avatar-img" />`;
+  }
+  return escapeHtml(avatar || '👤');
+};
+
 const renderThreadList = () => {
   const list = $('thread-list');
   list.innerHTML = '';
@@ -141,12 +149,12 @@ const renderThreadList = () => {
     .slice()
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .forEach((thread) => {
-      const avatar = getUserAvatar(thread.authorAvatar, thread.author);
+      const avatarHtml = getAvatarHtml(getUserAvatar(thread.authorAvatar, thread.author));
       const li = document.createElement('li');
       li.className = 'thread-item';
       li.innerHTML = `
         <div class="thread-header">
-          <span class="avatar-sm">${escapeHtml(avatar)}</span>
+          <span class="avatar-sm">${avatarHtml}</span>
           <div>
             <h3>${escapeHtml(thread.title)}</h3>
             <div class="meta">Автор: ${escapeHtml(thread.author)} • ${formatDate(thread.createdAt)} • ${thread.comments.length} комментариев</div>
@@ -167,7 +175,7 @@ const renderCurrentUser = () => {
 
   if (state.currentUser) {
     userInfo.innerHTML = `
-      <span class="avatar-sm">${escapeHtml(state.currentUser.avatar)}</span>
+      <span class="avatar-sm">${getAvatarHtml(state.currentUser.avatar)}</span>
       Вошёл как ${escapeHtml(state.currentUser.username)}
     `;
     const logoutBtn = document.createElement('button');
@@ -190,14 +198,55 @@ const renderCurrentUser = () => {
 
 const setupAvatarPicker = () => {
   const buttons = document.querySelectorAll('.avatar-option');
+  const fileInput = $('auth-avatar-upload');
+  const avatarField = $('auth-avatar');
+  const preview = $('avatar-preview');
+
+  const setSelectedAvatar = (value) => {
+    avatarField.value = value;
+    if (isImageAvatar(value)) {
+      preview.innerHTML = `<img src="${escapeHtml(value)}" alt="avatar preview" class="avatar-preview-img" />`;
+    } else {
+      preview.innerHTML = '';
+    }
+  };
+
   buttons.forEach((button) => {
     button.addEventListener('click', () => {
       buttons.forEach((item) => item.classList.remove('active'));
       button.classList.add('active');
       const avatar = button.dataset.avatar || '👤';
-      $('auth-avatar').value = avatar;
+      setSelectedAvatar(avatar);
+      if (fileInput) fileInput.value = '';
     });
   });
+
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert('Выберите изображение формата PNG, JPG или GIF.');
+        fileInput.value = '';
+        return;
+      }
+      if (file.size > 200 * 1024) {
+        alert('Файл слишком большой. Максимум 200 КБ.');
+        fileInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          buttons.forEach((item) => item.classList.remove('active'));
+          setSelectedAvatar(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 };
 
 const syncStorageUpdates = (event) => {
@@ -264,11 +313,11 @@ const openThread = (threadId) => {
   const thread = state.threads.find((item) => item.id === threadId);
   if (!thread) return;
 
-  const avatar = getUserAvatar(thread.authorAvatar, thread.author);
+  const avatarHtml = getAvatarHtml(getUserAvatar(thread.authorAvatar, thread.author));
   const details = $('thread-details');
   details.innerHTML = `
     <div class="thread-header">
-      <span class="avatar-sm">${escapeHtml(avatar)}</span>
+      <span class="avatar-sm">${avatarHtml}</span>
       <div>
         <h2>${escapeHtml(thread.title)}</h2>
         <div class="meta">Автор: ${escapeHtml(thread.author)} • ${formatDate(thread.createdAt)}</div>
@@ -294,12 +343,12 @@ const renderComments = (comments) => {
     .slice()
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
     .forEach((comment) => {
-      const avatar = getUserAvatar(comment.authorAvatar, comment.author);
+      const avatarHtml = getAvatarHtml(getUserAvatar(comment.authorAvatar, comment.author));
       const li = document.createElement('li');
       li.className = 'comment-item';
       li.innerHTML = `
         <div class="comment-header">
-          <span class="avatar-sm">${escapeHtml(avatar)}</span>
+          <span class="avatar-sm">${avatarHtml}</span>
           <div>
             <div class="meta">${escapeHtml(comment.author)} • ${formatDate(comment.createdAt)}</div>
           </div>
